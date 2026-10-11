@@ -1,0 +1,252 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Love Calculator ❤️</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #ff758c, #ff7eb3, #a18cd1);
+      color: #382033;
+    }
+    .card {
+      width: 100%;
+      max-width: 430px;
+      padding: 25px;
+      border-radius: 22px;
+      background: white;
+      box-shadow: 0 12px 35px #54204435;
+    }
+    h1, .sub { text-align: center; }
+    h1 { color: #e83e70; margin-top: 0; }
+    .sub { color: #755d70; }
+    label { display: block; margin-top: 15px; font-weight: bold; }
+    input {
+      width: 100%;
+      padding: 13px;
+      margin-top: 7px;
+      border: 1px solid #e8cbd9;
+      border-radius: 10px;
+      font-size: 16px;
+    }
+    button {
+      width: 100%;
+      margin-top: 18px;
+      padding: 13px;
+      border: 0;
+      border-radius: 10px;
+      background: #ed477b;
+      color: white;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    #result { text-align: center; margin-top: 18px; }
+    #score { font-size: 42px; color: #e83e70; font-weight: bold; }
+    .notice { font-size: 13px; line-height: 1.5; margin-top: 18px; }
+    .check { display: flex; gap: 9px; align-items: flex-start; font-weight: normal; }
+    .check input { width: auto; margin-top: 3px; }
+    hr { border: 0; border-top: 1px solid #eee; margin: 25px 0; }
+    .entry { padding: 10px; margin: 8px 0; background: #fff0f5; border-radius: 9px; overflow-wrap: anywhere; }
+    .small { font-size: 12px; color: #766; }
+    #adminPanel { display: none; }
+    #status { text-align: center; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>💖 Love Calculator 💖</h1>
+    <p class="sub">Find your love match!</p>
+
+    <form id="loveForm">
+      <label for="boyName">Your name</label>
+      <input id="boyName" maxlength="60" required placeholder="Enter your name">
+
+      <label for="girlName">Your crush's name</label>
+      <input id="girlName" maxlength="60" required placeholder="Enter crush's name">
+
+      <label class="check">
+        <input type="checkbox" id="consent" required>
+        <span>I understand that both names will be saved by the website owner.</span>
+      </label>
+
+      <button type="submit" id="calculateBtn">Calculate Love ❤️</button>
+    </form>
+
+    <div id="result" aria-live="polite"></div>
+    <p id="status"></p>
+    <p class="small">Just for fun — this score doesn't measure real feelings.</p>
+
+    <hr>
+    <section>
+      <h3>🔐 Owner Login</h3>
+      <form id="loginForm">
+        <label for="email">Admin email</label>
+        <input id="email" type="email" autocomplete="username" required placeholder="Your Firebase account email">
+        <label for="password">Admin password</label>
+        <input id="password" type="password" autocomplete="current-password" required placeholder="Your password">
+        <button type="submit">Login to view submissions</button>
+      </form>
+      <button id="logoutBtn" type="button" style="display:none;background:#66536b">Logout</button>
+      <p id="adminStatus" class="small" aria-live="polite"></p>
+      <section id="adminPanel">
+        <h3>📋 Saved names</h3>
+        <button id="refreshBtn" type="button">Refresh submissions</button>
+        <div id="submissions"></div>
+      </section>
+    </section>
+  </main>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-app.js";
+    import {
+      getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-auth.js";
+    import {
+      getFirestore, collection, addDoc, getDocs,
+      query, orderBy, serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyB7QRAiYQ2a9c97GJl8oOYKLtJZTGf7xIs",
+      authDomain: "love-calculator-32b43.firebaseapp.com",
+      projectId: "love-calculator-32b43",
+      storageBucket: "love-calculator-32b43.firebasestorage.app",
+      messagingSenderId: "219869748076",
+      appId: "1:219869748076:web:a04cd28c4cf07d274fb149"
+    };
+
+    const ADMIN_UID = "Ysttwz3IUHaWerKLmAzSmTLFlSs2";
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const loveForm = document.getElementById("loveForm");
+    const result = document.getElementById("result");
+    const status = document.getElementById("status");
+    const adminStatus = document.getElementById("adminStatus");
+    const adminPanel = document.getElementById("adminPanel");
+    const submissionsBox = document.getElementById("submissions");
+    const loginForm = document.getElementById("loginForm");
+    const logoutBtn = document.getElementById("logoutBtn");
+
+    loveForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const boyName = document.getElementById("boyName").value.trim();
+      const girlName = document.getElementById("girlName").value.trim();
+
+      if (!boyName || !girlName || !document.getElementById("consent").checked) return;
+
+      const score = Math.floor(Math.random() * 41) + 60;
+      result.innerHTML = "";
+      const heading = document.createElement("h2");
+      heading.textContent = `${boyName} ❤️ ${girlName}`;
+      const scoreText = document.createElement("div");
+      scoreText.id = "score";
+      scoreText.textContent = `${score}%`;
+      const message = document.createElement("p");
+      message.textContent = "Your fun love match score!";
+      result.append(heading, scoreText, message);
+      status.textContent = "Saving your names…";
+
+      const btn = document.getElementById("calculateBtn");
+      btn.disabled = true;
+
+      try {
+        await addDoc(collection(db, "submissions"), {
+          boyName,
+          girlName,
+          createdAt: serverTimestamp()
+        });
+        status.textContent = "Result calculated! Your names were saved.";
+      } catch (error) {
+        console.error(error);
+        status.textContent = "Could not save names. Please try again later.";
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    loginForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      adminStatus.textContent = "Logging in…";
+      try {
+        await signInWithEmailAndPassword(
+          auth,
+          document.getElementById("email").value.trim(),
+          document.getElementById("password").value
+        );
+      } catch (error) {
+        adminStatus.textContent = "Login failed. Check your email and password.";
+      }
+    });
+
+    logoutBtn.addEventListener("click", async () => {
+      await signOut(auth);
+    });
+
+    document.getElementById("refreshBtn").addEventListener("click", loadSubmissions);
+
+    onAuthStateChanged(auth, async (user) => {
+      if (user && user.uid === ADMIN_UID) {
+        loginForm.style.display = "none";
+        logoutBtn.style.display = "block";
+        adminPanel.style.display = "block";
+        adminStatus.textContent = "Admin logged in.";
+        await loadSubmissions();
+      } else {
+        loginForm.style.display = "block";
+        logoutBtn.style.display = "none";
+        adminPanel.style.display = "none";
+        submissionsBox.replaceChildren();
+        adminStatus.textContent = user
+          ? "This account is not authorized as the site owner."
+          : "Login with your owner account to view saved names.";
+      }
+    });
+
+    async function loadSubmissions() {
+      if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) return;
+      adminStatus.textContent = "Loading saved names…";
+      submissionsBox.replaceChildren();
+
+      try {
+        const q = query(collection(db, "submissions"), orderBy("createdAt", "desc"));
+        const snapshot = await getDocs(q);
+
+        if (snapshot.empty) {
+          submissionsBox.textContent = "No submissions yet.";
+        } else {
+          snapshot.forEach((docSnap) => {
+            const data = docSnap.data();
+            const entry = document.createElement("div");
+            entry.className = "entry";
+            const names = document.createElement("strong");
+            names.textContent = `${data.boyName} ❤️ ${data.girlName}`;
+            const date = document.createElement("div");
+            date.className = "small";
+            date.textContent = data.createdAt?.toDate
+              ? data.createdAt.toDate().toLocaleString()
+              : "Date pending";
+            entry.append(names, date);
+            submissionsBox.append(entry);
+          });
+        }
+        adminStatus.textContent = "Submissions loaded.";
+      } catch (error) {
+        console.error(error);
+        adminStatus.textContent = "Could not load submissions. Check Firestore rules and connection.";
+      }
+    }
+  </script>
+</body>
+  </html>
+  
